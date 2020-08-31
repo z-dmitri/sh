@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 mkdir -p /view/prometheus; chown 772:772 /view/prometheus
 mkdir /view/alertmanager; chown 772:772 /view/alertmanager
-mkdir /view/grafana_provisioning; chown 772:772 /view/grafana_provisioning
+mkdir /view/promtail; chown 772:772 /view/promtail
+mkdir /view/loki; chown 772:772 /view/loki
 mkdir /view/grafana; chown 772:772 /view/grafana
+mkdir /view/grafana/provisioning; chown 772:772 /view/grafana/provisioning
 docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
 curl https://raw.githubusercontent.com/z-dmitri/sh/master/update.sh | bash
 

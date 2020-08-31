@@ -25,6 +25,8 @@ services:
     restart: always
     networks:
       - view-net
+    expose:
+      - 9080  
     ports:
       - 9090:9090
     volumes:
@@ -36,8 +38,16 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --web.route-prefix=/
-      - --storage.tsdb.retention.time=200h
       - --web.enable-lifecycle
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=14d
+      - --storage.tsdb.wal-compression
+      - --storage.tsdb.max-block-duration=4h
+      - --storage.tsdb.wal-segment-size=60MB
+      - --storage.tsdb.allow-overlapping-blocks
+      - --query.max-samples=5000000
     depends_on:
 #     - alertmanager
       - node-exporter
@@ -102,15 +112,35 @@ services:
     image: grafana/loki:latest
     container_name: view.loki
     restart: always
-#    volumes:
-#      -./loki/loki-config.yml:/etc/loki-config.yml:ro
-#      - loki-data:/tmp/loki/
+    volumes:
+      - ./view/loki.yml:/etc/loki-config.yml:ro
+      - ./view/loki:/tmp/loki/
     networks:
       - view-net
+    expose:
+      - 3100
     ports:
       - 3100:3100
-    command: -config.file=/etc/loki/local-config.yaml
+    command: -config.file=/etc/local-config.yml
+    depends_on:
+      - promtail
 
+  promtail:
+    image: grafana/promtail:latest
+    container_name: view.loki.promtail
+    networks:
+      - view-net
+    expose:
+      - 9080
+    ports:
+      - 9080:9080      
+    volumes:
+      - ./view/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./view/promtail:/var/lib/promtail/positions
+#     - /var/log:/var/log
+    command: -config.file=/etc/promtail/promtail.yml
+    
   grafana:
     image: grafana/grafana:latest
     container_name: view.grafana
@@ -123,7 +153,7 @@ services:
       - 3000:3000 
     volumes:
       - ./view/grafana:/var/lib/grafana
-      - ./view/grafana_provisioning/:/etc/grafana/provisioning/      
+      - ./view/grafana/provisioning/:/etc/grafana/provisioning/      
       - /etc/ssl:/etc/certs:ro
     environment:
       - GF_INSTALL_PLUGINS=simpod-json-datasource,grafana-piechart-panel
